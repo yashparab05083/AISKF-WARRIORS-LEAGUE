@@ -213,11 +213,11 @@ function renderOrderUI(containerId, team) {
   container.innerHTML = `<h4>${team.name}</h4><div class="order-list" id="orderList_${team.id}"></div>`;
   const list = document.getElementById(`orderList_${team.id}`);
 
-  // Default: Boy, Boy, Girl
+  // Default: Boy, Boy, Boy (third slot is now selectable as boy or girl)
   const defaultOrder = [
     { type: 'boy', options: team.boys },
     { type: 'boy', options: team.boys },
-    { type: 'girl', options: team.girls }
+    { type: 'boy', options: team.boys }
   ];
 
   defaultOrder.forEach((slot, idx) => {
@@ -236,8 +236,6 @@ function renderOrderUI(containerId, team) {
 
     typeSelect.onchange = () => {
       populateNameSelect(nameSelect, team, typeSelect.value);
-      // Girl slot 3 must always be girl
-      if (idx === 2) typeSelect.value = 'girl';
     };
 
     row.appendChild(numSpan);
@@ -245,8 +243,6 @@ function renderOrderUI(containerId, team) {
     row.appendChild(nameSelect);
     list.appendChild(row);
   });
-  // Lock slot 3 to girl
-  list.querySelectorAll('.order-slot')[2].querySelectorAll('select')[0].disabled = true;
 }
 
 function populateNameSelect(sel, team, type) {
