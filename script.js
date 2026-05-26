@@ -71,7 +71,7 @@ let state = loadState();
 function loadState() {
   try {
     const saved = localStorage.getItem("kumite_state");
-    if (saved) return JSON.parse(saved);
+    if (saved) return { fixtures: generateFixtures(), standings: initStandings(), history: [], ...JSON.parse(saved) };
   } catch(e) {}
   return { fixtures: generateFixtures(), standings: initStandings(), history: [] };
 }
@@ -208,6 +208,83 @@ function setupStep3() {
   renderOrderUI('orderTeamB', setupData.teamB);
 }
 
+function getMatchesInSlot(slot) {
+  return slot < 2 ? 3 : 1;
+}
+
+function isFinalActiveSegment() {
+  const currentGlobal = (match.inning - 1) * 7 + (match.attackerSlot === 0 ? match.matchInSlot : match.attackerSlot === 1 ? 3 + match.matchInSlot : 6);
+  return currentGlobal === 13;
+}
+
+function advanceToNextSegment() {
+  const matchesInSlot = getMatchesInSlot(match.attackerSlot);
+  match.matchInSlot++;
+
+  if (match.matchInSlot >= matchesInSlot) {
+    match.attackerSlot++;
+    match.matchInSlot = 0;
+    match.selectedDefender = null;
+
+    if (match.attackerSlot >= 3) {
+      if (match.inning === 1) {
+        match.inning = 2;
+        match.attackerTeam = match.defenderTeam;
+        match.defenderTeam = match.attackerTeam === 'A' ? 'B' : 'A';
+        match.attackerSlot = 0;
+        match.matchInSlot = 0;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function pauseMatch() {
+  if (!match) return;
+  if (isFinalActiveSegment() && !(match.pausedSegments && match.pausedSegments.length)) {
+    alert('This is the final segment and cannot be paused because there is no later segment to continue with.');
+    return;
+  }
+
+  if (!confirm('Pause the current segment for injury and continue with the next one?')) return;
+
+  match.pausedSegments = match.pausedSegments || [];
+  match.pausedSegments.push({
+    inning: match.inning,
+    attackerTeam: match.attackerTeam,
+    defenderTeam: match.defenderTeam,
+    attackerSlot: match.attackerSlot,
+    matchInSlot: match.matchInSlot,
+    selectedDefender: match.selectedDefender,
+    timerRemaining: timerRemaining
+  });
+
+  stopTimer();
+  if (!advanceToNextSegment()) {
+    alert('No further segment available. Resume a paused segment to continue.');
+  }
+  resetTimerRing();
+  updateLiveUI();
+}
+
+function resumePausedSegment() {
+  if (!match || !match.pausedSegments || !match.pausedSegments.length) return;
+  const segment = match.pausedSegments.pop();
+  match.inning = segment.inning;
+  match.attackerTeam = segment.attackerTeam;
+  match.defenderTeam = segment.defenderTeam;
+  match.attackerSlot = segment.attackerSlot;
+  match.matchInSlot = segment.matchInSlot;
+  match.selectedDefender = segment.selectedDefender;
+  match.timerRemaining = segment.timerRemaining;
+  stopTimer();
+  resetTimerRing();
+  updateLiveUI();
+}
+
 function renderOrderUI(containerId, team) {
   const container = document.getElementById(containerId);
   container.innerHTML = `<h4>${team.name}</h4><div class="order-list" id="orderList_${team.id}"></div>`;
@@ -289,6 +366,7 @@ function startMatch() {
     attackerSlot: 0,     // 0,1,2 → which attacker (slot in order)
     matchInSlot: 0,      // 0,1,2 → match within a slot (slot 0,1 have 3; slot 2 has 1)
     selectedDefender: null,
+    pausedSegments: [],
 
     // Progress tracking: 2 innings × 7 matches each = 14 dots
     progress: [],
@@ -313,6 +391,12 @@ function startMatch() {
   stopTimer();
   resetTimerRing();
   updateLiveUI();
+}
+
+function updatePausedControls() {
+  const resumeBtn = document.getElementById('resumeSegmentBtn');
+  if (!resumeBtn || !match) return;
+  resumeBtn.classList.toggle('hidden', !(match.pausedSegments && match.pausedSegments.length));
 }
 
 /* ============================================================
@@ -380,10 +464,12 @@ function updateLiveUI() {
 
   // Progress dots
   renderProgressDots();
+  const pauseInfo = match.pausedSegments && match.pausedSegments.length ? ` · Paused ${match.pausedSegments.length}` : '';
   document.getElementById('progressLabel').textContent =
-    `Inning ${match.inning} · Attacker ${match.attackerSlot + 1}/3 · Match ${match.matchInSlot + 1}/${matchesInSlot}`;
+    `Inning ${match.inning} · Attacker ${match.attackerSlot + 1}/3 · Match ${match.matchInSlot + 1}/${matchesInSlot}${pauseInfo}`;
 
   updateLiveTimeInput();
+  updatePausedControls();
 }
 
 function renderProgressDots() {
@@ -444,7 +530,7 @@ let timerRemaining = 0;
 function resetTimerRing() {
   clearInterval(timerInterval);
   timerRunning = false;
-  timerRemaining = match ? match.timerDuration : 60;
+  timerRemaining = match ? (match.timerRemaining ?? match.timerDuration) : 60;
   document.getElementById('timerDisplay').textContent = formatTime(timerRemaining);
   document.getElementById('timerBtn').textContent = '▶ START';
   document.getElementById('timerBtn').classList.remove('running');
