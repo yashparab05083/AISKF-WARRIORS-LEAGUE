@@ -17,14 +17,14 @@ const TEAMS = [
     id: 1,
     name: "LEGENDARY LIONS",
     color: "#ff8f00",
-    boys: ["Vinay Shah", "Deepesh Rajput", "Prathamesh Suthar", "Vedang Rajadhyaksha"],
+    boys: ["Vinay Shah", "Deepesh Rajput", "Prathamesh Suthar", "Shashank"],
     girls: ["Manaswi Patil", "Ishika Rajpurohit"]
   },
   {
     id: 2,
     name: "CHATUR CHEETAHS",
     color: "#1b5e20",
-    boys: ["Ajay Yadav", "Shubham Panchal", "Vedant Shukla", "Arnav"],
+    boys: ["Ajay Yadav", "Shubham Panchal", "Vedant Shukla", "Arnav","Jeet"],
     girls: ["Prajakta Chinkate"]
   },
   {
