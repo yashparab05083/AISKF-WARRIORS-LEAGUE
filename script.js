@@ -52,7 +52,7 @@ function generateFixtures() {
 
 // Standings per team
 function initStandings() {
-  return TEAMS.map(t => ({ id: t.id, name: t.name, played: 0, wins: 0, losses: 0, points: 0, scoreDiff: 0 }));
+  return TEAMS.map(t => ({ id: t.id, name: t.name, played: 0, wins: 0, losses: 0, points: 0, scoreDiff: 0, pointsScored: 0 }));
 }
 
 // small helper: convert hex to rgba string
@@ -208,17 +208,30 @@ function setupStep3() {
   renderOrderUI('orderTeamB', setupData.teamB);
 }
 
-function getMatchesInSlot(slot) {
-  return slot < 2 ? 3 : 1;
+function getMatchesInSlot(order, attackerSlot) {
+  const slot = order?.[attackerSlot];
+  return slot && slot.type === 'girl' ? 1 : 3;
+}
+
+function getMatchesBeforeSlot(order, attackerSlot) {
+  return order.slice(0, attackerSlot)
+    .reduce((sum, slot) => sum + (slot.type === 'girl' ? 1 : 3), 0);
+}
+
+function getInningTotalMatches(order) {
+  return order.reduce((sum, slot) => sum + (slot.type === 'girl' ? 1 : 3), 0);
 }
 
 function isFinalActiveSegment() {
-  const currentGlobal = (match.inning - 1) * 7 + (match.attackerSlot === 0 ? match.matchInSlot : match.attackerSlot === 1 ? 3 + match.matchInSlot : 6);
-  return currentGlobal === 13;
+  if (!match) return false;
+  const currentOrder = match.attackerTeam === 'A' ? match.orderA : match.orderB;
+  const matchesInSlot = getMatchesInSlot(currentOrder, match.attackerSlot);
+  return match.inning === 2 && match.attackerSlot === currentOrder.length - 1 && match.matchInSlot === matchesInSlot - 1;
 }
 
 function advanceToNextSegment() {
-  const matchesInSlot = getMatchesInSlot(match.attackerSlot);
+  const currentOrder = match.attackerTeam === 'A' ? match.orderA : match.orderB;
+  const matchesInSlot = getMatchesInSlot(currentOrder, match.attackerSlot);
   match.matchInSlot++;
 
   if (match.matchInSlot >= matchesInSlot) {
@@ -226,7 +239,7 @@ function advanceToNextSegment() {
     match.matchInSlot = 0;
     match.selectedDefender = null;
 
-    if (match.attackerSlot >= 3) {
+    if (match.attackerSlot >= currentOrder.length) {
       if (match.inning === 1) {
         match.inning = 2;
         match.attackerTeam = match.defenderTeam;
@@ -429,7 +442,7 @@ function updateLiveUI() {
   document.getElementById('attackerName').textContent = attSlotData.name;
   document.getElementById('attackerTeam').textContent = attTeam.name;
 
-  const matchesInSlot = match.attackerSlot < 2 ? 3 : 1;
+  const matchesInSlot = getMatchesInSlot(attOrder, match.attackerSlot);
   document.getElementById('matchCounter').textContent =
     `Match ${match.matchInSlot + 1} / ${matchesInSlot}`;
 
@@ -448,8 +461,8 @@ function updateLiveUI() {
   // Defender selector
   const defBtns = document.getElementById('defenderBtns');
   defBtns.innerHTML = '';
-  // For slot 2 (girl), only girl defenders
-  const eligibleDefs = match.attackerSlot === 2
+  const isGirlAttacker = attSlotData.type === 'girl';
+  const eligibleDefs = isGirlAttacker
     ? defTeamObj.girls.map(n => ({ type: 'girl', name: n }))
     : [...defTeamObj.boys.map(n => ({ type: 'boy', name: n })),
        ...defTeamObj.girls.map(n => ({ type: 'girl', name: n }))];
@@ -475,9 +488,11 @@ function updateLiveUI() {
 function renderProgressDots() {
   const container = document.getElementById('progressDots');
   container.innerHTML = '';
-  // 2 innings × (3+3+1) = 14 matches
-  const totalDots = 14;
-  const currentGlobal = (match.inning - 1) * 7 + getGlobalMatchInInning();
+  const firstOrder = match.inning1Attacker === match.teamA ? match.orderA : match.orderB;
+  const secondOrder = firstOrder === match.orderA ? match.orderB : match.orderA;
+  const firstTotal = getInningTotalMatches(firstOrder);
+  const totalDots = firstTotal + getInningTotalMatches(secondOrder);
+  const currentGlobal = (match.inning === 2 ? firstTotal : 0) + getGlobalMatchInInning();
 
   for (let i = 0; i < totalDots; i++) {
     const dot = document.createElement('div');
@@ -485,7 +500,7 @@ function renderProgressDots() {
     if (i < currentGlobal) dot.classList.add('done');
     else if (i === currentGlobal) dot.classList.add('active');
     container.appendChild(dot);
-    if (i === 6) { // separator between innings
+    if (i === firstTotal - 1) {
       const sep = document.createElement('div');
       sep.style.cssText = 'width:12px;border-right:2px solid var(--border);margin:0 4px;';
       container.appendChild(sep);
@@ -494,9 +509,8 @@ function renderProgressDots() {
 }
 
 function getGlobalMatchInInning() {
-  // slot 0: matches 0-2, slot 1: matches 3-5, slot 2: match 6
-  const slotOffsets = [0, 3, 6];
-  return slotOffsets[match.attackerSlot] + match.matchInSlot;
+  const currentOrder = match.attackerTeam === 'A' ? match.orderA : match.orderB;
+  return getMatchesBeforeSlot(currentOrder, match.attackerSlot) + match.matchInSlot;
 }
 
 /* ============================================================
@@ -536,34 +550,29 @@ function resetTimerRing() {
   document.getElementById('timerBtn').classList.remove('running');
   setRingProgress(1);
   document.getElementById('ringProgress').classList.remove('urgent');
-  updateLiveTimeInput();
+  updateAllTimerUI();
 }
 
 function toggleTimer() {
   if (timerRunning) {
     clearInterval(timerInterval);
     timerRunning = false;
-    document.getElementById('timerBtn').textContent = '▶ RESUME';
-    document.getElementById('timerBtn').classList.remove('running');
   } else {
     timerRunning = true;
-    document.getElementById('timerBtn').textContent = '⏸ PAUSE';
-    document.getElementById('timerBtn').classList.add('running');
     timerInterval = setInterval(() => {
       timerRemaining--;
       document.getElementById('timerDisplay').textContent = formatTime(timerRemaining);
       setRingProgress(timerRemaining / match.timerDuration);
-      updateLiveTimeInput();
+      updateAllTimerUI();
       if (timerRemaining <= 10) document.getElementById('ringProgress').classList.add('urgent');
       if (timerRemaining <= 0) {
         clearInterval(timerInterval);
         timerRunning = false;
-        document.getElementById('timerBtn').textContent = '▶ START';
-        document.getElementById('timerBtn').classList.remove('running');
         document.getElementById('timerDisplay').textContent = '0:00';
       }
     }, 1000);
   }
+  updateAllTimerUI();
 }
 
 function stopTimer() {
@@ -589,7 +598,7 @@ function adjustMatchTime(seconds) {
   match.timerDuration = Math.max(match.timerDuration, timerRemaining);
   document.getElementById('timerDisplay').textContent = formatTime(timerRemaining);
   setRingProgress(timerRemaining / match.timerDuration);
-  updateLiveTimeInput();
+  updateAllTimerUI();
 }
 
 function syncLiveTimeInput() {
@@ -601,12 +610,14 @@ function syncLiveTimeInput() {
   match.timerDuration = Math.max(match.timerDuration, timerRemaining);
   document.getElementById('timerDisplay').textContent = formatTime(timerRemaining);
   setRingProgress(timerRemaining / match.timerDuration);
+  updateAllTimerUI();
 }
 
 function updateLiveTimeInput() {
   const input = document.getElementById('liveTimeInput');
   if (!input) return;
   input.value = timerRemaining;
+  updateAllTimerUI();
 }
 
 /* ============================================================
@@ -616,29 +627,24 @@ function nextSegment() {
   if (!match.selectedDefender) { alert('Please select a defender first.'); return; }
   stopTimer();
 
-  const matchesInSlot = match.attackerSlot < 2 ? 3 : 1;
+  const currentOrder = match.attackerTeam === 'A' ? match.orderA : match.orderB;
+  const matchesInSlot = getMatchesInSlot(currentOrder, match.attackerSlot);
   match.matchInSlot++;
 
   if (match.matchInSlot >= matchesInSlot) {
-    // Move to next attacker slot
     match.attackerSlot++;
     match.matchInSlot = 0;
     match.selectedDefender = null;
 
-    if (match.attackerSlot >= 3) {
-      // Inning over
+    if (match.attackerSlot >= currentOrder.length) {
       if (match.inning === 1) {
-        // Switch inning
         match.inning = 2;
-        match.attackerTeam = match.defenderTeam;  // swap
-        match.defenderTeam = match.attackerTeam === 'A' ? 'B' : 'A';
-        // Recalculate defender
+        match.attackerTeam = match.defenderTeam;
         match.defenderTeam = match.attackerTeam === 'A' ? 'B' : 'A';
         match.attackerSlot = 0;
         match.matchInSlot = 0;
         match.selectedDefender = null;
       } else {
-        // Both innings done → calculate result
         matchOver();
         return;
       }
@@ -670,14 +676,78 @@ function showSuperRound() {
   document.getElementById('srScoreA').textContent = '0';
   document.getElementById('srScoreB').textContent = '0';
 
-  // Show one player from each side (first in order)
-  const pA = match.orderA[0].name, pB = match.orderB[0].name;
+  const playersA = [...match.teamA.boys, ...match.teamA.girls];
+  const playersB = [...match.teamB.boys, ...match.teamB.girls];
+  const selectA = document.getElementById('srPlayerASelect');
+  const selectB = document.getElementById('srPlayerBSelect');
+
+  selectA.innerHTML = playersA.map(p => `<option value="${p}">${p}</option>`).join('');
+  selectB.innerHTML = playersB.map(p => `<option value="${p}">${p}</option>`).join('');
+
+  selectA.value = match.orderA[0]?.name || playersA[0] || '';
+  selectB.value = match.orderB[0]?.name || playersB[0] || '';
+
+  updateSuperRoundPlayers();
+
+  timerRemaining = match.timerDuration;
+  stopTimer();
+  updateAllTimerUI();
+
+  document.getElementById('superRoundOverlay').classList.remove('hidden');
+}
+
+function updateSuperRoundPlayers() {
+  const aSelect = document.getElementById('srPlayerASelect');
+  const bSelect = document.getElementById('srPlayerBSelect');
+  const pA = aSelect?.value || '—';
+  const pB = bSelect?.value || '—';
   document.getElementById('srPlayers').innerHTML =
     `<div class="sr-player" style="color:var(--red)">${pA}</div>
      <div class="vs-badge">VS</div>
      <div class="sr-player" style="color:#2196f3">${pB}</div>`;
+}
 
-  document.getElementById('superRoundOverlay').classList.remove('hidden');
+function updateAllTimerUI() {
+  document.getElementById('timerDisplay').textContent = formatTime(timerRemaining);
+  const liveInput = document.getElementById('liveTimeInput');
+  if (liveInput) liveInput.value = timerRemaining;
+  const srInput = document.getElementById('srTimeInput');
+  if (srInput) srInput.value = timerRemaining;
+
+  const liveBtn = document.getElementById('timerBtn');
+  const srBtn = document.getElementById('srTimerBtn');
+  const label = timerRunning ? '⏸ PAUSE' : '▶ START';
+  if (liveBtn) {
+    liveBtn.textContent = label;
+    liveBtn.classList.toggle('running', timerRunning);
+  }
+  if (srBtn) {
+    srBtn.textContent = label;
+    srBtn.classList.toggle('running', timerRunning);
+  }
+  const srDisplay = document.getElementById('srTimerDisplay');
+  if (srDisplay) srDisplay.textContent = formatTime(timerRemaining);
+}
+
+function toggleSuperRoundTimer() {
+  toggleTimer();
+}
+
+function adjustSuperRoundTime(seconds) {
+  if (!match) return;
+  timerRemaining = Math.max(0, timerRemaining + seconds);
+  match.timerDuration = Math.max(match.timerDuration, timerRemaining);
+  updateAllTimerUI();
+}
+
+function syncSuperRoundTimeInput() {
+  const input = document.getElementById('srTimeInput');
+  if (!input || !match) return;
+  const value = parseInt(input.value, 10);
+  if (isNaN(value) || value < 0) return;
+  timerRemaining = value;
+  match.timerDuration = Math.max(match.timerDuration, timerRemaining);
+  updateAllTimerUI();
 }
 
 function addSRScore(team, pts) {
@@ -746,14 +816,25 @@ function finaliseMatch() {
 
   const wRow = state.standings.find(s => s.id === winnerTeam.id);
   const lRow = state.standings.find(s => s.id === loserTeam.id);
-
+  // Update played/wins/losses/points
   wRow.played++; wRow.wins++; wRow.points += 2;
-  wRow.scoreDiff += (match.scoreA > match.scoreB)
-    ? (match.scoreA - match.scoreB) : (match.scoreB - match.scoreA);
-
   lRow.played++; lRow.losses++;
-  lRow.scoreDiff -= (match.scoreA > match.scoreB)
-    ? (match.scoreA - match.scoreB) : (match.scoreB - match.scoreA);
+
+  // Track total points scored for each team (shown in standings)
+  const rowA = state.standings.find(s => s.id === match.teamA.id);
+  const rowB = state.standings.find(s => s.id === match.teamB.id);
+  if (rowA) rowA.pointsScored = (rowA.pointsScored || 0) + match.scoreA;
+  if (rowB) rowB.pointsScored = (rowB.pointsScored || 0) + match.scoreB;
+
+  // Maintain scoreDiff for backward compatibility (not displayed)
+  const diff = Math.abs(match.scoreA - match.scoreB);
+  if (match.scoreA > match.scoreB) {
+    wRow.scoreDiff += diff;
+    lRow.scoreDiff -= diff;
+  } else {
+    wRow.scoreDiff += diff;
+    lRow.scoreDiff -= diff;
+  }
 
   // History
   state.history.unshift({
@@ -800,9 +881,9 @@ function confirmEndMatch() {
    13. STANDINGS
    ============================================================ */
 function renderStandings() {
-  // Sort: points DESC, scoreDiff DESC
+  // Sort: points DESC, then total points scored DESC
   const sorted = [...state.standings].sort((a, b) =>
-    b.points !== a.points ? b.points - a.points : b.scoreDiff - a.scoreDiff
+    b.points !== a.points ? b.points - a.points : (b.pointsScored || 0) - (a.pointsScored || 0)
   );
 
   const tbody = document.getElementById('standingsTbody');
@@ -810,7 +891,7 @@ function renderStandings() {
   sorted.forEach((row, idx) => {
     const tr = document.createElement('tr');
     tr.className = `rank-${idx+1}` + (idx < 2 ? ' qualify-row' : '');
-    const diff = row.scoreDiff;
+    const ptsSc = row.pointsScored || 0;
     tr.innerHTML = `
       <td><span class="rank-num">${idx + 1}</span></td>
       <td style="font-weight:700">${row.name}</td>
@@ -818,7 +899,7 @@ function renderStandings() {
       <td style="color:var(--green)">${row.wins}</td>
       <td style="color:var(--red)">${row.losses}</td>
       <td class="pts-cell">${row.points}</td>
-      <td class="${diff >= 0 ? 'diff-pos' : 'diff-neg'}">${diff > 0 ? '+' : ''}${diff}</td>`;
+      <td class="pts-cell">${ptsSc}</td>`;
     tbody.appendChild(tr);
   });
 
