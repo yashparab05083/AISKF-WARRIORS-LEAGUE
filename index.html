@@ -49,15 +49,37 @@
         <div class="step-label">STEP 1 — SELECT TEAMS</div>
         <div class="team-selectors">
           <div class="selector-group">
-            <label>RED CORNER</label>
+            <label>TEAM 1</label>
             <select id="teamA" class="select-box red-select">
               <option value="">— Select Team —</option>
             </select>
           </div>
           <div class="vs-badge">VS</div>
           <div class="selector-group">
-            <label>BLUE CORNER</label>
+            <label>TEAM 2</label>
             <select id="teamB" class="select-box blue-select">
+              <option value="">— Select Team —</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-step" onclick="setupStep1B()">NEXT →</button>
+      </div>
+
+      <!-- Step 1B: Assign Colors -->
+      <div class="setup-card hidden" id="setupStep1B">
+        <div class="step-label">STEP 1B — CHOOSE CORNER COLORS</div>
+        <p class="setup-info">Assign which corner is white and which is blue:</p>
+        <div class="team-selectors">
+          <div class="selector-group">
+            <label>WHITE CORNER</label>
+            <select id="whiteCorner" class="select-box" style="border: 2px solid #f0f0f8;">
+              <option value="">— Select Team —</option>
+            </select>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="selector-group">
+            <label>BLUE CORNER</label>
+            <select id="blueCorner" class="select-box blue-select" style="border: 2px solid #1565c0;">
               <option value="">— Select Team —</option>
             </select>
           </div>
@@ -67,7 +89,7 @@
 
       <!-- Step 2: Toss -->
       <div class="setup-card hidden" id="setupStep2">
-        <div class="step-label">STEP 2 — TOSS</div>
+        <div class="step-label">STEP 3 — TOSS</div>
         <p class="setup-info" id="tossInfo">Who won the toss?</p>
         <div class="toss-btns" id="tossBtns"></div>
         <div class="choice-row hidden" id="choiceRow">
@@ -80,7 +102,7 @@
 
       <!-- Step 3: Player Order -->
       <div class="setup-card hidden" id="setupStep3">
-        <div class="step-label">STEP 3 — PLAYER ORDER</div>
+        <div class="step-label">STEP 4 — PLAYER ORDER</div>
         <p class="setup-info">Set the attacker order for both teams</p>
         <div class="order-section">
           <div class="order-team" id="orderTeamA"></div>
