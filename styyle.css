@@ -373,7 +373,7 @@ body::before {
 #screenLive::before {
   content: "";
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(90deg, var(--left-color, rgba(183,28,28,0.18)) 0 48%, rgba(14,14,18,0.92) 48% 52%, var(--right-color, rgba(13,71,161,0.18)) 52% 100%);
+  background: linear-gradient(90deg, var(--left-color, rgba(255,255,255,0.55)) 0 48%, rgba(14,14,18,0.92) 48% 52%, var(--right-color, rgba(13,71,161,0.18)) 52% 100%);
   opacity: 1;
   transition: background 0.25s ease, opacity 0.25s ease;
 }
@@ -401,8 +401,8 @@ body::before {
 
 .team-block { text-align: center; padding: 1.2rem; border-radius: 10px; }
 .red-block {
-  background: linear-gradient(135deg, rgba(229,57,53,0.12), rgba(10,10,15,0));
-  border: 1px solid rgba(229,57,53,0.3);
+  background: linear-gradient(135deg, rgba(240,240,248,0.08), rgba(10,10,15,0));
+  border: 1px solid rgba(240,240,248,0.2);
 }
 .blue-block {
   background: linear-gradient(225deg, rgba(21,101,192,0.12), rgba(10,10,15,0));
