@@ -531,8 +531,55 @@ body::before {
 }
 .overlay-text { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
 
+.sr-player-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.sr-player-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  text-align: left;
+}
+.sr-player-card label {
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.sr-player-card select {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--white);
+  padding: 0.7rem 0.8rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
 .sr-players { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; }
 .sr-player { font-family: var(--font-disp); font-size: 1.2rem; letter-spacing: 1px; }
+
+.sr-timer-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.sr-timer-display {
+  font-family: var(--font-disp);
+  font-size: 2.8rem;
+  color: var(--gold);
+}
+.sr-timer-panel .timer-adjust-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
 .sr-score-row {
   display: flex; align-items: center; justify-content: center;
