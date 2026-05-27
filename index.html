@@ -185,12 +185,34 @@
       <button class="btn-step hidden" id="resumeSegmentBtn" style="margin-top:0.5rem;" onclick="resumePausedSegment()">RESUME PAUSED SEGMENT</button>
     </div>
 
-    <!-- Super Round Overlay -->
+    </div>
+
+  <!-- ===== STANDINGS SCREEN ===== -->
+    <!-- Super Round Overlay (moved to body-level for true popup behavior) -->
     <div class="overlay hidden" id="superRoundOverlay">
       <div class="overlay-card">
         <div class="overlay-title">⚡ SUPER ROUND</div>
         <p class="overlay-text">Scores are tied! One player from each team fights.</p>
+        <div class="sr-player-selection">
+          <div class="sr-player-card">
+            <label for="srPlayerASelect">Red Corner</label>
+            <select id="srPlayerASelect" onchange="updateSuperRoundPlayers()"></select>
+          </div>
+          <div class="sr-player-card">
+            <label for="srPlayerBSelect">Blue Corner</label>
+            <select id="srPlayerBSelect" onchange="updateSuperRoundPlayers()"></select>
+          </div>
+        </div>
         <div class="sr-players" id="srPlayers"></div>
+        <div class="sr-timer-panel">
+          <div class="sr-timer-display" id="srTimerDisplay">1:00</div>
+          <div class="timer-adjust-row">
+            <button class="timer-adjust-btn" onclick="adjustSuperRoundTime(-10)">-10s</button>
+            <input type="number" id="srTimeInput" class="timer-input live" min="0" step="10" onchange="syncSuperRoundTimeInput()" />
+            <button class="timer-adjust-btn" onclick="adjustSuperRoundTime(10)">+10s</button>
+          </div>
+          <button class="btn-timer-toggle" id="srTimerBtn" onclick="toggleSuperRoundTimer()">▶ START</button>
+        </div>
         <div class="sr-score-row">
           <div>
             <div class="sr-team" id="srTeamA">TEAM A</div>
@@ -212,7 +234,7 @@
       </div>
     </div>
 
-    <!-- Match Result Overlay -->
+    <!-- Match Result Overlay (moved to body-level for true popup behavior) -->
     <div class="overlay hidden" id="resultOverlay">
       <div class="overlay-card result-card">
         <div class="result-confetti" id="resultConfetti"></div>
@@ -223,9 +245,6 @@
         <button class="btn-primary" onclick="finaliseMatch()">SAVE & RETURN HOME</button>
       </div>
     </div>
-  </div>
-
-  <!-- ===== STANDINGS SCREEN ===== -->
   <div id="screenTable" class="screen">
     <div class="standings-container">
       <h2 class="section-title">LEAGUE STANDINGS</h2>
@@ -239,7 +258,7 @@
             <th>W</th>
             <th>L</th>
             <th>PTS</th>
-            <th>SCORE DIFF</th>
+            <th>PTS SCORED</th>
           </tr>
         </thead>
         <tbody id="standingsTbody"></tbody>
