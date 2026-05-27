@@ -127,6 +127,7 @@ let setupData = {};
 function initSetup() {
   // Reset cards
   document.getElementById('setupStep1').classList.remove('hidden');
+  document.getElementById('setupStep1B').classList.add('hidden');
   document.getElementById('setupStep2').classList.add('hidden');
   document.getElementById('setupStep3').classList.add('hidden');
   setupData = {};
@@ -143,7 +144,7 @@ function initSetup() {
   });
 }
 
-function setupStep2() {
+function setupStep1B() {
   const aId = parseInt(document.getElementById('teamA').value);
   const bId = parseInt(document.getElementById('teamB').value);
   if (isNaN(aId) || isNaN(bId) || aId === bId) {
@@ -161,6 +162,37 @@ function setupStep2() {
   }
 
   document.getElementById('setupStep1').classList.add('hidden');
+  document.getElementById('setupStep1B').classList.remove('hidden');
+
+  // Populate color corner selects
+  const whiteSelect = document.getElementById('whiteCorner');
+  const blueSelect = document.getElementById('blueCorner');
+  whiteSelect.innerHTML = '<option value="">— Select Team —</option>';
+  blueSelect.innerHTML = '<option value="">— Select Team —</option>';
+  
+  [setupData.teamA, setupData.teamB].forEach(t => {
+    const o1 = document.createElement('option');
+    o1.value = t.id; o1.textContent = t.name;
+    whiteSelect.appendChild(o1);
+    
+    const o2 = document.createElement('option');
+    o2.value = t.id; o2.textContent = t.name;
+    blueSelect.appendChild(o2);
+  });
+}
+
+function setupStep2() {
+  const whiteId = parseInt(document.getElementById('whiteCorner').value);
+  const blueId = parseInt(document.getElementById('blueCorner').value);
+  if (isNaN(whiteId) || isNaN(blueId) || whiteId === blueId) {
+    alert('Please select different teams for white and blue corners.'); return;
+  }
+  
+  // Store which team is which corner
+  setupData.whiteTeamId = whiteId;
+  setupData.blueTeamId = blueId;
+  
+  document.getElementById('setupStep1B').classList.add('hidden');
   document.getElementById('setupStep2').classList.remove('hidden');
 
   // Toss buttons
@@ -392,13 +424,22 @@ function startMatch() {
   showScreen('live');
   document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
 
-  // Apply split background colors for the full live screen
+  // Apply split background colors for the full live screen (WHITE and BLUE)
   const liveScreen = document.getElementById('screenLive');
   if (liveScreen) {
-    liveScreen.style.setProperty('--left-color', hexToRgba(match.teamA.color, 0.14));
-    liveScreen.style.setProperty('--right-color', hexToRgba(match.teamB.color, 0.14));
-    liveScreen.style.setProperty('--left-solid', match.teamA.color);
-    liveScreen.style.setProperty('--right-solid', match.teamB.color);
+    // Determine which team is white and which is blue
+    const teamAIsWhite = setupData.whiteTeamId === match.teamA.id;
+    const leftColor = teamAIsWhite ? '#f0f0f8' : '#1565c0';  // white or blue
+    const rightColor = teamAIsWhite ? '#1565c0' : '#f0f0f8'; // blue or white
+    
+    // Use higher opacity for white (0.55) to make it brighter, lower for blue (0.14)
+    const leftOpacity = teamAIsWhite ? 0.55 : 0.14;
+    const rightOpacity = teamAIsWhite ? 0.14 : 0.55;
+    
+    liveScreen.style.setProperty('--left-color', hexToRgba(leftColor, leftOpacity));
+    liveScreen.style.setProperty('--right-color', hexToRgba(rightColor, rightOpacity));
+    liveScreen.style.setProperty('--left-solid', leftColor);
+    liveScreen.style.setProperty('--right-solid', rightColor);
   }
 
   stopTimer();
